@@ -204,7 +204,7 @@ if __name__ == '__main__':
     mon = Monitor()
     mon.start()
     try:
-        server = HTTPServer(("localhost", settings['port']), JSONRequestHandler)
+        server = HTTPServer(("", settings['port']), JSONRequestHandler)
         server.serve_forever()
     except KeyboardInterrupt:
         mon.stop()
