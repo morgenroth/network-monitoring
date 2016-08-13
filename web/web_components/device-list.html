@@ -1,0 +1,110 @@
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/paper-styles/paper-styles.html">
+<link rel="import" href="../bower_components/paper-toast/paper-toast.html">
+
+<dom-module id="device-list">
+  <template>
+    <style>
+      /* local DOM styles go here */
+      :host {
+        display: inline-block;
+        padding: 12pt;
+      }
+
+      paper-card {
+        margin: 4pt;
+      }
+    </style>
+
+    <!-- local DOM goes here -->
+    <iron-ajax id="loader"
+      url="http://localhost:1234"
+      handle-as="json"
+      last-response="{{ajaxResponse}}"
+      on-response="onLoaderCompleted"
+      debounce-duration="5000"></iron-ajax>
+
+    <iron-ajax id="modifier"
+      url="http://localhost:1234/modify"
+      handle-as="json"
+      on-response="onModifierCompleted"
+      debounce-duration="1000"></iron-ajax>
+
+    <paper-toast id="disable_toast" text="Device [[lastdisabled]] has been disabled."></paper-toast>
+
+    <template is="dom-repeat" items="[[ajaxResponse]]">
+      <paper-card heading="[[item.tag]]">
+        <div class="card-content">
+          <paper-icon-item>
+            <iron-icon icon="icons:settings-ethernet" item-icon>
+            </iron-icon>
+            <paper-item-body two-line>
+              <div>[[item.mac]]</div>
+              <div secondary>[[item.ipv4_address]]</div>
+            </paper-item-body>
+          </paper-icon-item>
+          <paper-icon-item>
+            <iron-icon style="color: [[_computeColor(item.state)]]" icon="icons:update" item-icon>
+            </iron-icon>
+            <paper-item-body>
+              <div style="color: [[_computeColor(item.state)]]">[[_computeLatency(item.latency)]]</div>
+            </paper-item-body>
+          </paper-icon-item>
+        </div>
+        <div class="card-actions">
+          <div class="horizontal justified">
+            <a href="[[item.management_url]]" tabindex="-1" target="_blank">
+              <paper-icon-button icon="icons:link"></paper-icon-button>
+            </a>
+            <paper-icon-button on-tap="handleUndeploy" icon="icons:clear"></paper-icon-button>
+          </div>
+        </div>
+      </paper-card>
+    </template>
+  </template>
+  <script>
+  Polymer({
+    is: 'device-list',
+    properties: {
+      lastdisabled: String
+    },
+    attached: function() {
+      setInterval(function() {
+        this.$.loader.generateRequest();
+      }.bind(this), 5000);
+      this.$.loader.generateRequest();
+    },
+    handleUndeploy: function(evt) {
+      this.$.modifier.params = {"action":"undeploy", "mac":evt.model.item.mac};
+      this.$.modifier.generateRequest();
+    },
+    onModifierCompleted: function(data) {
+      this.lastdisabled = data.detail.response.mac;
+      this.$.disable_toast.show();
+      this.$.loader.generateRequest();
+    },
+    onLoaderCompleted: function() {
+    },
+    _computeLatency: function(value) {
+      if (value) {
+        return (value * 1000.0).toFixed(0) + ' ms';
+      } else {
+        return 'LOST!';
+      }
+    },
+    _computeColor: function(state) {
+      if (state == 'active') {
+        return "green";
+      } else if (state == 'unstable') {
+        return "orange";
+      } else {
+        return "red";
+      }
+    }
+  });
+  </script>
+</dom-module>
+<
