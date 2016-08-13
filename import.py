@@ -2,6 +2,7 @@
 import MySQLdb
 import json
 import socket
+import hashlib
 
 files = ['bridges.txt', 'hosts.txt', 'stations.txt', 'cams.txt']
 dhcp_files = ['dhcpd.hosts', 'dhcpd.stations']
@@ -59,7 +60,7 @@ for f in dhcp_files:
                     ipv4_address = data[1].strip(";")
 
         if host and mac and ipv4_address:
-            print(host, mac, ipv4_address)
+            print("dhcp", host, mac, ipv4_address)
             try:
                 c = db.cursor()
                 c.execute("""INSERT INTO `hosts` (`mac`, `tag`, `name`, `ipv4_address`) VALUES (LOWER(%s), %s, %s, %s)""", (mac, host, host, ipv4_address))
@@ -74,5 +75,32 @@ for f in dhcp_files:
             ipv4_address = None
 
     fd.close()
+
+fd = open("event.zone")
+for line in fd.readlines():
+    data = line.split()
+    if len(data) > 2:
+        if data[2] == 'A':
+            if data[0].startswith(';'):
+                continue
+
+            m = hashlib.md5()
+            for d in data:
+                m.update(d)
+
+            mac = "00:00:00:" + m.hexdigest()[:8]
+            host = data[0]
+            ipv4_address = data[3]
+
+            print("bind", host, mac, ipv4_address)
+            try:
+                c = db.cursor()
+                c.execute("""INSERT INTO `hosts` (`mac`, `tag`, `name`, `ipv4_address`) VALUES (LOWER(%s), %s, %s, %s)""", (mac, host, host, ipv4_address))
+                c.close()
+            except MySQLdb.IntegrityError:
+                c = db.cursor()
+                c.execute("""UPDATE `hosts` SET `name` = %s, `ipv4_address` = %s WHERE `tag` = %s""", (host, ipv4_address, host))
+                c.close()
+fd.close()
 
 db.commit()
