@@ -101,7 +101,8 @@ def discover():
         except socket.gaierror:
             ret = None
 
-        deploy(row[0])
+        if ret:
+            deploy(row[0])
 
     cur.close()
     db.commit()
