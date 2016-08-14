@@ -1,0 +1,118 @@
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/paper-styles/paper-styles.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+
+<dom-module id="device-list-group">
+  <template>
+    <style include="iron-flex iron-flex-alignment">
+    <style>
+      /* local DOM styles go here */
+      :host {
+        @apply(--layout-flex);
+        display: inline-block;
+        padding: 12pt;
+      }
+
+      paper-card {
+        margin: 4pt;
+      }
+
+      .flex-horizontal {
+	@apply(--layout-horizontal);
+       }
+       
+       .flexchild {
+         @apply(--layout-flex);
+         @apply(--layout-horizontal);
+       }
+
+       .column {
+         margin-right: 12pt;
+       }
+
+      .title {
+        @apply(--paper-font-title);
+      }
+    </style>
+
+    <!-- local DOM goes here -->
+    <iron-ajax id="modifier"
+      url="http://localhost:1234/modify"
+      handle-as="json"
+      on-response="onModifierCompleted"
+      debounce-duration="1000"></iron-ajax>
+
+    <paper-toast id="disable_toast" text="Device [[lastdisabled]] has been disabled."></paper-toast>
+    <p class="title">[[_computeTitle(group)]]</p>
+    <paper-card>
+      <div class="card-content">
+        <template is="dom-repeat" items="[[devices]]" filter="isGroup" observe="group">
+          <paper-item class="layout horizontal">
+            <div class="column">[[item.tag]]</div>
+            <div class="column flexchild">[[item.mac]]</div>
+            <div class="column flexchild">[[item.ipv4_address]]</div>
+            <div class="column"><iron-icon style="color: [[_computeColor(item.state)]]" icon="icons:update" item-icon></div>
+            <div class="column flexchild" style="color: [[_computeColor(item.state)]]">[[_computeLatency(item.latency)]]</div>
+            <div class="column flexchild">
+              <a href="[[item.management_url]]" tabindex="-1" target="_blank"><paper-icon-button icon="icons:link"></paper-icon-button></a>
+              <paper-icon-button on-tap="handleUndeploy" icon="icons:clear"></paper-icon-button>
+            </div>
+          </paper-item>
+        </template>
+      </div>
+    </paper-card>
+  </template>
+  <script>
+  Polymer({
+    is: 'device-list-group',
+    properties: {
+      lastdisabled: String,
+      devices: {
+        type: Array
+      },
+      group: String
+    },
+    attached: function() {
+    },
+    isGroup: function(item) {
+      return item.group == this.group;
+    },
+    handleUndeploy: function(evt) {
+      this.$.modifier.params = {"action":"undeploy", "mac":evt.model.item.mac};
+      this.$.modifier.generateRequest();
+    },
+    onModifierCompleted: function(data) {
+      this.lastdisabled = data.detail.response.mac;
+      this.$.disable_toast.show();
+      this.$.loader.generateRequest();
+    },
+    _computeTitle: function(value) {
+      if (value) {
+        return value.substr(0,1).toUpperCase() + value.substr(1).toLowerCase();
+      } else {
+        return "Default";
+      }
+    },
+    _computeLatency: function(value) {
+      if (value) {
+        return (value * 1000.0).toFixed(0) + ' ms';
+      } else {
+        return 'LOST!';
+      }
+    },
+    _computeColor: function(state) {
+      if (state == 'active') {
+        return "green";
+      } else if (state == 'unstable') {
+        return "orange";
+      } else {
+        return "red";
+      }
+    }
+  });
+  </script>
+</dom-module>
+

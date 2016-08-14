@@ -83,7 +83,7 @@ def queryAll():
 
     # Use all the SQL you like
     cur.execute(
-        "SELECT `tag`, `name`, `description`, `mac`, `ipv4_address`, `management_url` " +
+        "SELECT `tag`, `name`, `description`, `mac`, `ipv4_address`, `management_url`, `group` " +
         "FROM hosts " +
         "WHERE `ipv4_address` IS NOT NULL AND `deployed` = 1 " +
         "ORDER BY `name`")
@@ -112,7 +112,8 @@ def queryAll():
             'ipv4_address': row[4],
             'management_url': row[5],
             'latency': ret,
-            'state': state
+            'state': state,
+            'group': row[6]
         }
 
         if not device['management_url']:

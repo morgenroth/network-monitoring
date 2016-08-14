@@ -1,0 +1,121 @@
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../bower_components/iron-collapse/iron-collapse.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/paper-styles/paper-styles.html">
+
+<dom-module id="device-card">
+  <template>
+    <style>
+      /* local DOM styles go here */
+      :host {
+        display: inline-block;
+        margin: 2pt;
+      }
+
+      paper-card.active {
+        --paper-card-header-color: #ffffff;
+        --paper-card-background-color: var(--paper-green-500);
+      }
+
+      paper-card.inactive {
+        --paper-card-header-color: #ffffff;
+        --paper-card-background-color: var(--paper-red-500);
+      }
+
+      paper-card.unstable {
+        --paper-card-header-color: #ffffff;
+        --paper-card-background-color: var(--paper-orange-500);
+      }
+
+      paper-card {
+        color: #ffffff;
+      }
+
+      paper-card a {
+        color: #ffffff;
+        text-decoration: none;
+      }
+    </style>
+
+    <!-- local DOM goes here -->
+    <iron-ajax id="modifier"
+      url="http://localhost:1234/modify"
+      handle-as="json"
+      on-response="onModifierCompleted"
+      debounce-duration="1000"></iron-ajax>
+
+    <paper-toast id="disable_toast" text="Device [[device.name]] has been disabled."></paper-toast>
+
+    <paper-card heading="[[device.tag]]" on-tap="toggleCollapse" class$="[[device.state]]">
+      <iron-collapse id="content">
+        <paper-icon-item>
+          <iron-icon icon="icons:settings-ethernet" item-icon>
+          </iron-icon>
+          <paper-item-body two-line>
+            <div>[[device.mac]]</div>
+            <div secondary>[[device.ipv4_address]]</div>
+          </paper-item-body>
+        </paper-icon-item>
+        <paper-icon-item>
+          <iron-icon icon="icons:update" item-icon>
+          </iron-icon>
+          <paper-item-body>
+            <div>[[_computeLatency(device.latency)]]</div>
+          </paper-item-body>
+        </paper-icon-item>
+      </div>
+      <div class="card-actions">
+        <div class="horizontal justified">
+          <a href="[[device.management_url]]" tabindex="-1" target="_blank">
+            <paper-icon-button icon="icons:link"></paper-icon-button>
+          </a>
+          <paper-icon-button on-tap="handleUndeploy" icon="icons:clear"></paper-icon-button>
+        </div>
+      </iron-collapse>
+    </paper-card>
+  </template>
+  <script>
+  Polymer({
+    is: 'device-card',
+    properties: {
+      device: Object
+    },
+    toggleCollapse: function() {
+      this.$.content.toggle();
+    },
+    handleUndeploy: function(evt) {
+      this.$.modifier.params = {"action":"undeploy", "mac":device.mac};
+      this.$.modifier.generateRequest();
+    },
+    onModifierCompleted: function(data) {
+      this.$.disable_toast.show();
+    },
+    _computeTitle: function(value) {
+      if (value) {
+        return value.substr(0,1).toUpperCase() + value.substr(1).toLowerCase();
+      } else {
+        return "Default";
+      }
+    },
+    _computeLatency: function(value) {
+      if (value) {
+        return (value * 1000.0).toFixed(0) + ' ms';
+      } else {
+        return 'LOST!';
+      }
+    },
+    _computeColor: function(state) {
+      if (state == 'active') {
+        return "green";
+      } else if (state == 'unstable') {
+        return "orange";
+      } else {
+        return "red";
+      }
+    }
+  });
+  </script>
+</dom-module>
+
