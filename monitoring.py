@@ -20,13 +20,14 @@ db = MySQLdb.connect(host=settings['mysql']['host'],
                      db=settings['mysql']['database'])
 
 ignore_result = False
+db_lock = threading.Lock()
 result_lock = threading.Lock()
 results = []
 
 
 class JSONRequestHandler (BaseHTTPRequestHandler):
     def do_GET(self):
-        global result_lock, results, ignore_result
+        global result_lock, results, ignore_result, db_lock
         url = urlparse.urlparse(self.path)
         params = urlparse.parse_qs(url.query)
         if url.path == "/modify":
@@ -38,8 +39,10 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
             # send a blank line to end headers:
             self.wfile.write("\r\n")
             if params['action'][0] == 'undeploy':
+                db_lock.acquire()
                 undeploy(params['mac'][0])
                 db.commit()
+                db_lock.release()
 
             result_lock.acquire()
             for device in results:
@@ -81,6 +84,8 @@ def deploy(mac):
 
 
 def discover():
+    global db_lock
+    db_lock.acquire()
     # you must create a Cursor object. It will let
     #  you execute all the queries you need
     cur = db.cursor()
@@ -106,11 +111,13 @@ def discover():
 
     cur.close()
     db.commit()
+    db_lock.release()
 
 
 def queryAll():
+    global db_lock
     devices = []
-
+    db_lock.acquire()
     # you must create a Cursor object. It will let
     #  you execute all the queries you need
     cur = db.cursor()
@@ -157,6 +164,7 @@ def queryAll():
 
     cur.close()
     db.commit()
+    db_lock.release()
     return devices
 
 
