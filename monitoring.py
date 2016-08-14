@@ -39,6 +39,7 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
             self.wfile.write("\r\n")
             if params['action'][0] == 'undeploy':
                 undeploy(params['mac'][0])
+                db.commit()
 
             result_lock.acquire()
             for device in results:
@@ -70,6 +71,38 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
 def undeploy(mac):
     cur = db.cursor()
     cur.execute("""UPDATE `hosts` SET `deployed` = 0 WHERE `mac` = %s""", (mac,))
+    cur.close()
+
+
+def deploy(mac):
+    cur = db.cursor()
+    cur.execute("""UPDATE `hosts` SET `deployed` = 1 WHERE `mac` = %s""", (mac,))
+    cur.close()
+
+
+def discover():
+    # you must create a Cursor object. It will let
+    #  you execute all the queries you need
+    cur = db.cursor()
+
+    # Use all the SQL you like
+    cur.execute(
+        "SELECT `mac`, `ipv4_address` " +
+        "FROM hosts " +
+        "WHERE `ipv4_address` IS NOT NULL AND `deployed` = 0 " +
+        "ORDER BY `name`")
+
+    # print all the first cell of all the rows
+    for row in cur.fetchall():
+        try:
+            ret = ping.do_one(row[1], 0.1)
+        except socket.error:
+            ret = None
+        except socket.gaierror:
+            ret = None
+
+        deploy(row[0])
+
     cur.close()
     db.commit()
 
@@ -148,15 +181,22 @@ class Monitor(threading.Thread):
             curses.cbreak()
 
             while not self.stop_signal:
-                ret = queryAll()
-                self.report(stdscr, ret)
-                result_lock.acquire()
-                if not ignore_result:
-                    results = ret
-                else:
-                    ignore_result = False
-                result_lock.release()
-                time.sleep(0.5)
+                discover()
+                time.sleep(1.0)
+
+                for i in range(0, 10):
+                    if self.stop_signal:
+                        break
+
+                    ret = queryAll()
+                    self.report(stdscr, ret)
+                    result_lock.acquire()
+                    if not ignore_result:
+                        results = ret
+                    else:
+                        ignore_result = False
+                    result_lock.release()
+                    time.sleep(1.0)
 
         finally:
             curses.echo()
