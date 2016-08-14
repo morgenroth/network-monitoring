@@ -170,15 +170,19 @@ class Monitor(threading.Thread):
         global result_lock, results, ignore_result
         try:
             stdscr = curses.initscr()
+        except:
+            stdscr = None
 
-            # initialize curses colors
-            curses.start_color()
-            curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-            curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-            curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        try:
+            if stdscr:
+                # initialize curses colors
+                curses.start_color()
+                curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+                curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
 
-            curses.noecho()
-            curses.cbreak()
+                curses.noecho()
+                curses.cbreak()
 
             while not self.stop_signal:
                 discover()
@@ -189,7 +193,8 @@ class Monitor(threading.Thread):
                         break
 
                     ret = queryAll()
-                    self.report(stdscr, ret)
+                    if stdscr:
+                        self.report(stdscr, ret)
                     result_lock.acquire()
                     if not ignore_result:
                         results = ret
@@ -199,9 +204,10 @@ class Monitor(threading.Thread):
                     time.sleep(1.0)
 
         finally:
-            curses.echo()
-            curses.nocbreak()
-            curses.endwin()
+            if stdscr:
+                curses.echo()
+                curses.nocbreak()
+                curses.endwin()
 
     def stop(self):
         self.stop_signal = True
