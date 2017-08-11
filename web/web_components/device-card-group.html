@@ -23,7 +23,7 @@
 
     <!-- local DOM goes here -->
     <p class="title">[[_computeTitle(group)]]</p>
-    <template is="dom-repeat" items="[[devices]]" filter="isGroup" observe="group">
+    <template is="dom-repeat" items="[[devices]]" filter="isGroup" observe="group" sort="compareDevice">
       <device-card device="[[item]]"></device-card>
     </template>
   </template>
@@ -47,6 +47,10 @@
       } else {
         return "Default";
       }
+    },
+    compareDevice: function(a, b) {
+      if (a.tag == b.tag) return 0;
+      return a.tag < b.tag ? -1 : 1;
     }
   });
   </script>

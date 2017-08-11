@@ -49,7 +49,7 @@
     <p class="title">[[_computeTitle(group)]]</p>
     <paper-card>
       <div class="card-content">
-        <template is="dom-repeat" items="[[devices]]" filter="isGroup" observe="group">
+        <template is="dom-repeat" items="[[devices]]" filter="isGroup" observe="group" sort="compareDevice">
           <paper-item class="layout horizontal">
             <div class="column">[[item.tag]]</div>
             <div class="column flexchild">[[item.mac]]</div>
@@ -111,6 +111,11 @@
       } else {
         return "red";
       }
+    },
+    compareDevice: function(a, b) {
+      console.log(a, b);
+      if (a == b) return 0;
+      return a < b ? -1 : 1;
     }
   });
   </script>

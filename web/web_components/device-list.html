@@ -20,7 +20,7 @@
       on-response="onLoaderCompleted"
       debounce-duration="5000"></iron-ajax>
     
-    <template is="dom-repeat" items="[[groups]]">
+    <template is="dom-repeat" items="[[groups]]" sort="compareGroup">
       <device-card-group devices="[[ajaxResponse]]" group="[[item]]"></device-card-group>
     </template>
   </template>
@@ -48,6 +48,10 @@
       }
       groups.sort();
       this.groups = groups;
+    },
+    compareGroup: function(a, b) {
+      if (a == b) return 0;
+      return a < b ? -1 : 1;
     }
   });
   </script>
