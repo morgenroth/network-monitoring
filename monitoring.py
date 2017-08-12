@@ -85,9 +85,10 @@ def analyze_transitions(past, next):
         try:
             item = lookup[updated['tag']]
             if not item['state'] or item['state'] != updated['state']:
-                event_changed(updated['tag'], updated)
+                event_state_changed(updated['tag'], updated['state'])
         except KeyError:
-            event_changed(updated['tag'], updated)
+            event_info_changed(updated['tag'], updated)
+            event_state_changed(updated['tag'], updated['state'])
 
 
 def event_removed(tag):
@@ -103,8 +104,17 @@ def event_deployed(tag):
     cur.close()
 
 
-def event_changed(tag, data):
-    mqttc.publish("monitoring/devices/%s/info" % (tag), json.dumps(data), retain=True)
+def event_info_changed(tag, data):
+    info_keys = ["ipv4_address", "mac", "group", "name", "management_url", "description"]
+    info = {}
+    for key in info_keys:
+        info[key] = data[key]
+
+    mqttc.publish("monitoring/devices/%s/info" % (tag), json.dumps(info), retain=True)
+
+
+def event_state_changed(tag, state):
+    mqttc.publish("monitoring/devices/%s/state" % (tag), state, retain=True)
 
 
 def discover():
