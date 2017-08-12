@@ -81,11 +81,11 @@
       return item.group == this.group;
     },
     handleUndeploy: function(evt) {
-      this.$.modifier.params = {"action":"undeploy", "mac":evt.model.item.mac};
+      this.$.modifier.params = {"action":"undeploy", "tag":evt.model.item.tag};
       this.$.modifier.generateRequest();
     },
     onModifierCompleted: function(data) {
-      this.lastdisabled = data.detail.response.mac;
+      this.lastdisabled = data.detail.response.tag;
       this.$.disable_toast.show();
       this.$.loader.generateRequest();
     },

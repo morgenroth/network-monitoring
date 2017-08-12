@@ -44,18 +44,18 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
             self.wfile.write("\r\n")
             if params['action'][0] == 'undeploy':
                 db_lock.acquire()
-                event_removed(params['mac'][0])
+                event_removed(params['tag'][0])
                 db.commit()
                 db_lock.release()
 
             result_lock.acquire()
             for device in results:
-                if device['mac'] == params['mac'][0]:
+                if device['tag'] == params['tag'][0]:
                     results.remove(device)
             ignore_result = True
             result_lock.release()
 
-            self.wfile.write(json.dumps({'result': 'ok', 'action': params['action'][0], 'mac': params['mac'][0]}))
+            self.wfile.write(json.dumps({'result': 'ok', 'action': params['action'][0], 'tag': params['tag'][0]}))
 
         elif self.path == "/":
             # send response code:
@@ -85,26 +85,26 @@ def analyze_transitions(past, next):
         try:
             item = lookup[updated['tag']]
             if not item['state'] or item['state'] != updated['state']:
-                event_changed(updated['mac'], updated)
+                event_changed(updated['tag'], updated)
         except KeyError:
-            event_changed(updated['mac'], updated)
+            event_changed(updated['tag'], updated)
 
 
-def event_removed(mac):
+def event_removed(tag):
     cur = db.cursor()
-    cur.execute("""UPDATE `hosts` SET `deployed` = 0 WHERE `mac` = %s""", (mac,))
+    cur.execute("""UPDATE `hosts` SET `deployed` = 0 WHERE `tag` = %s""", (tag,))
     cur.close()
-    mqttc.publish("monitoring/devices/%s/info" % (mac), "")
+    mqttc.publish("monitoring/devices/%s/info" % (tag), "")
 
 
-def event_deployed(mac):
+def event_deployed(tag):
     cur = db.cursor()
-    cur.execute("""UPDATE `hosts` SET `deployed` = 1 WHERE `mac` = %s""", (mac,))
+    cur.execute("""UPDATE `hosts` SET `deployed` = 1 WHERE `tag` = %s""", (tag,))
     cur.close()
 
 
-def event_changed(mac, data):
-    mqttc.publish("monitoring/devices/%s/info" % (mac), json.dumps(data), retain=True)
+def event_changed(tag, data):
+    mqttc.publish("monitoring/devices/%s/info" % (tag), json.dumps(data), retain=True)
 
 
 def discover():
@@ -116,7 +116,7 @@ def discover():
 
     # Use all the SQL you like
     cur.execute(
-        "SELECT `mac`, `ipv4_address` " +
+        "SELECT `tag`, `ipv4_address` " +
         "FROM hosts " +
         "WHERE `ipv4_address` IS NOT NULL AND `deployed` = 0 " +
         "ORDER BY `name`")

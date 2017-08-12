@@ -85,7 +85,7 @@
       this.$.content.toggle();
     },
     handleUndeploy: function(evt) {
-      this.$.modifier.params = {"action":"undeploy", "mac":this.device.mac};
+      this.$.modifier.params = {"action":"undeploy", "tag":this.device.tag};
       this.$.modifier.generateRequest();
     },
     onModifierCompleted: function(data) {
