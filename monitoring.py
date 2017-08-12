@@ -84,8 +84,29 @@ def analyze_transitions(past, next):
     for updated in next:
         try:
             item = lookup[updated['tag']]
-            if not item['state'] or item['state'] != updated['state']:
-                event_state_changed(updated['tag'], updated['state'])
+            if item['rating']:
+                updated['rating'] = item['rating'] + updated['rating']
+
+                if updated['rating'] < 0.0:
+                    updated['rating'] = 0.0
+
+                if updated['rating'] > 10.0:
+                    updated['rating'] = 10.0
+                    updated['state'] = 'inactive'
+                elif updated['rating'] > 5.0:
+                    updated['state'] = 'unstable'
+                else:
+                    updated['state'] = 'active'
+            else:
+                if updated['state'] == 'inactive':
+                    updated['rating'] = 10.0
+                elif updated['state'] == 'unstable':
+                    updated['rating'] = 6.0
+                else:
+                    updated['rating'] = 0.0
+
+                if not item['state'] or item['state'] != updated['state']:
+                    event_state_changed(updated['tag'], updated['state'])
         except KeyError:
             event_info_changed(updated['tag'], updated)
             event_state_changed(updated['tag'], updated['state'])
@@ -174,10 +195,13 @@ def queryAll():
 
         if ret > 0.05:
             state = 'unstable'
+            rating = -0.5
         elif ret:
             state = 'active'
+            rating = -1.0
         else:
             state = 'inactive'
+            rating = 1.0
 
         device = {
             'tag': row[0],
@@ -188,7 +212,8 @@ def queryAll():
             'management_url': row[5],
             'latency': ret,
             'state': state,
-            'group': row[6]
+            'group': row[6],
+            'rating': rating
         }
 
         if not device['management_url']:
