@@ -7,6 +7,8 @@ import threading
 import time
 import curses
 import urlparse
+import paho.mqtt.client as mqtt
+import json
 
 from BaseHTTPServer import HTTPServer
 from BaseHTTPServer import BaseHTTPRequestHandler
@@ -18,6 +20,8 @@ db = MySQLdb.connect(host=settings['mysql']['host'],
                      user=settings['mysql']['user'],
                      passwd=settings['mysql']['password'],
                      db=settings['mysql']['database'])
+
+mqttc = mqtt.Client()
 
 ignore_result = False
 db_lock = threading.Lock()
@@ -40,7 +44,7 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
             self.wfile.write("\r\n")
             if params['action'][0] == 'undeploy':
                 db_lock.acquire()
-                undeploy(params['mac'][0])
+                event_removed(params['mac'][0])
                 db.commit()
                 db_lock.release()
 
@@ -71,16 +75,36 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
         return
 
 
-def undeploy(mac):
+def analyze_transitions(past, next):
+    # create lookup
+    lookup = {}
+    for item in past:
+        lookup[item['tag']] = item
+
+    for updated in next:
+        try:
+            item = lookup[updated['tag']]
+            if not item['state'] or item['state'] != updated['state']:
+                event_changed(updated['mac'], updated)
+        except KeyError:
+            event_changed(updated['mac'], updated)
+
+
+def event_removed(mac):
     cur = db.cursor()
     cur.execute("""UPDATE `hosts` SET `deployed` = 0 WHERE `mac` = %s""", (mac,))
     cur.close()
+    mqttc.publish("monitoring/devices/%s/info" % (mac), "")
 
 
-def deploy(mac):
+def event_deployed(mac):
     cur = db.cursor()
     cur.execute("""UPDATE `hosts` SET `deployed` = 1 WHERE `mac` = %s""", (mac,))
     cur.close()
+
+
+def event_changed(mac, data):
+    mqttc.publish("monitoring/devices/%s/info" % (mac), json.dumps(data), retain=True)
 
 
 def discover():
@@ -107,7 +131,7 @@ def discover():
             ret = None
 
         if ret:
-            deploy(row[0])
+            event_deployed(row[0])
 
     cur.close()
     db.commit()
@@ -206,6 +230,7 @@ class Monitor(threading.Thread):
                         self.report(stdscr, ret)
                     result_lock.acquire()
                     if not ignore_result:
+                        analyze_transitions(results, ret)
                         results = ret
                     else:
                         ignore_result = False
@@ -257,6 +282,8 @@ class Monitor(threading.Thread):
         stdscr.refresh()
 
 if __name__ == '__main__':
+    mqttc.connect(settings['mqtt']['host'], settings['mqtt']['port'], 60)
+    mqttc.loop_start()
     mon = Monitor()
     mon.start()
     try:
@@ -265,3 +292,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         mon.stop()
     mon.join()
+    mqttc.loop_stop()
