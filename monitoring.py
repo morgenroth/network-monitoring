@@ -102,7 +102,7 @@ def calculate_rating(previous, current):
         if current['latency'] > 0.05:
             current['rating'] = current['rating'] + 0.5
         elif current['latency']:
-            current['rating'] = current['rating'] - 1.0
+            current['rating'] = 0.0
         else:
             current['rating'] = current['rating'] + 1.0
 
