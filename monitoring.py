@@ -137,7 +137,8 @@ def event_list_updated(data):
                 event_state_changed(current['tag'], current['state'])
         except KeyError:
             event_info_changed(current['tag'], current)
-            event_state_changed(current['tag'], current['state'])
+            if current['state']:
+                event_state_changed(current['tag'], current['state'])
 
         # finally use it as new result
         results.append(current)
