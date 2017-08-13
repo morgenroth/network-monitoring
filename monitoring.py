@@ -76,10 +76,10 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
 
 
 def calculate_state(data):
-    if data['rating'] >= 5.0:
-        data['state'] = 'unstable'
-    elif data['rating'] >= 10.0:
+    if data['rating'] >= 10.0:
         data['state'] = 'inactive'
+    elif data['rating'] >= 5.0:
+        data['state'] = 'unstable'
     else:
         data['state'] = 'active'
     return data
