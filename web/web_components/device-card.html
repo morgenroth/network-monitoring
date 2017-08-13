@@ -36,6 +36,17 @@
         color: #ffffff;
         text-decoration: none;
       }
+
+      .noselect {
+        cursor:default;
+        -webkit-touch-callout: none; /* iOS Safari */
+          -webkit-user-select: none; /* Safari */
+           -khtml-user-select: none; /* Konqueror HTML */
+             -moz-user-select: none; /* Firefox */
+              -ms-user-select: none; /* Internet Explorer/Edge */
+                  user-select: none; /* Non-prefixed version, currently
+                                        supported by Chrome and Opera */
+      }
     </style>
 
     <!-- local DOM goes here -->
@@ -47,7 +58,7 @@
 
     <paper-toast id="disable_toast" text="Device [[device.name]] has been disabled."></paper-toast>
 
-    <paper-card heading="[[device.tag]]" on-tap="toggleCollapse" class$="[[device.state]]">
+    <paper-card heading="[[device.tag]]" on-tap="toggleCollapse" class$="[[device.state]] noselect">
       <iron-collapse id="content">
         <paper-icon-item>
           <iron-icon icon="icons:settings-ethernet" item-icon>
