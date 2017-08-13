@@ -55,7 +55,7 @@ if __name__ == '__main__':
         xmpp.register_plugin('xep_0045')  # Multi-User Chat
         xmpp.register_plugin('xep_0199')  # XMPP Ping
 
-        if xmpp.connect():
+        if xmpp.connect(reattempt=True):
             mqttc.loop_start()
             xmpp.process(block=True)
             mqttc.loop_stop()
