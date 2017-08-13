@@ -1,10 +1,12 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="../bower_components/app-layout/app-layout.html">
-<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
 <link rel="import" href="../bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="../bower_components/iron-icons/device-icons.html">
 <link rel="import" href="../bower_components/iron-icons/hardware-icons.html">
-<link rel="import" href="../bower_components/fullscreen-api/fullscreen-icon-button.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="device-list.html">
 
 <dom-module id="app-monitoring">
@@ -15,16 +17,14 @@
         font-family: 'Roboto', 'Noto', sans-serif;
         background-color: #eee;
       }
+
       app-header {
         background-color: #4285f4;
         color: #fff;
       }
+
       app-header paper-icon-button {
         --paper-icon-button-ink-color: white;
-      }
-
-      app-drawer {
-        background: var(--paper-)
       }
 
       paper-icon-item {
@@ -37,34 +37,43 @@
                   user-select: none; /* Non-prefixed version, currently
                                         supported by Chrome and Opera */
       }
+
+      app-drawer-layout:not([narrow]) [drawer-toggle] {
+        display: none;
+      }
+    }
     </style>
+
     <app-drawer-layout force-narrow>
-      <app-drawer>
+      <app-drawer slot="drawer" swipe-open>
         <app-toolbar>Menu</app-toolbar>
-          <div role="listbox">
-            <paper-icon-item>
-              <iron-icon icon="device:storage" item-icon></iron-icon>
-              Devices
-            </paper-icon-item>
-            <paper-icon-item>
-              <iron-icon icon="hardware:device-hub" item-icon></iron-icon>
-              Sitemap
-            </paper-icon-item>
-            <paper-icon-item>
-              <iron-icon icon="icons:settings-input-component" item-icon></iron-icon>
-              Switch Ports
-            </paper-icon-item>
-          </div>
+        <div role="listbox">
+          <paper-icon-item>
+            <iron-icon icon="device:storage" slot="item-icon"></iron-icon>
+            Devices
+          </paper-icon-item>
+          <paper-icon-item>
+            <iron-icon icon="hardware:device-hub" slot="item-icon"></iron-icon>
+            Sitemap
+          </paper-icon-item>
+          <paper-icon-item>
+            <iron-icon icon="icons:settings-input-component" slot="item-icon"></iron-icon>
+            Switch Ports
+          </paper-icon-item>
+        </div>
       </app-drawer>
-      <app-header-layout id="main_view">
-        <app-header fixed effects="waterfall">
+    
+      <app-header-layout>
+        <app-header reveals effects="waterfall" slot="header">
           <app-toolbar>
-            <paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
-            <div spacer main-title>Network Monitoring</div>
-            <fullscreen-icon-button target="#main_view" title="fullscreen" alt="fullscreen" tabindex="0"></fullscreen-icon-button>
+            <paper-icon-button icon="icons:menu" drawer-toggle></paper-icon-button>
+            <div main-title>Network Monitoring</div>
+            <paper-icon-button icon="{{computeFullscreenIcon(fullscreen)}}" on-tap="toggleFullscreen"></paper-icon-button>
           </app-toolbar>
         </app-header>
+
         <device-list id="main_view"></device-list>
+
       </app-header-layout>
     </app-drawer-layout>
   </template>
@@ -72,6 +81,50 @@
   Polymer({
     is: 'app-monitoring',
     properties: {
+      fullscreen: {
+        type: Boolean,
+        value: false
+      }
+    },
+    computeFullscreenIcon: function(fullscreen) {
+      if (!fullscreen) {
+        return "icons:fullscreen";
+      } else {
+        return "icons:fullscreen-exit";
+      }
+    },
+    isFullScreen: function() {
+      return (document.fullscreenElement && document.fullscreenElement !== null) ||
+          (document.webkitFullscreenElement && document.webkitFullscreenElement !== null) ||
+          (document.mozFullScreenElement && document.mozFullScreenElement !== null) ||
+          (document.msFullscreenElement && document.msFullscreenElement !== null);
+    },
+    toggleFullscreen: function() {
+      var docElm = this.$.main_view;
+
+      if (!this.isFullScreen()) {
+        this.fullscreen = true;
+        if (docElm.requestFullscreen) {
+          docElm.requestFullscreen();
+        } else if (docElm.mozRequestFullScreen) {
+          docElm.mozRequestFullScreen();
+        } else if (docElm.webkitRequestFullScreen) {
+          docElm.webkitRequestFullScreen();
+        } else if (docElm.msRequestFullscreen) {
+          docElm.msRequestFullscreen();
+        }
+      } else {
+        this.fullscreen = false;
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      }
     }
   });
   </script>
