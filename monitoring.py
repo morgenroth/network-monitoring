@@ -130,11 +130,11 @@ def event_list_updated(data):
     for current in data:
         try:
             previous = lookup[current['tag']]
-            if not previous['state'] or previous['state'] != current['state']:
-                event_state_changed(current['tag'], current['state'])
-
             current = calculate_rating(previous, current)
             current = calculate_state(current)
+
+            if not previous['state'] or previous['state'] != current['state']:
+                event_state_changed(current['tag'], current['state'])
         except KeyError:
             event_info_changed(current['tag'], current)
             event_state_changed(current['tag'], current['state'])
