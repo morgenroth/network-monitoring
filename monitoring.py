@@ -75,41 +75,72 @@ class JSONRequestHandler (BaseHTTPRequestHandler):
         return
 
 
-def analyze_transitions(past, next):
+def calculate_state(data):
+    if data['rating'] >= 5.0:
+        data['state'] = 'unstable'
+    elif data['rating'] >= 10.0:
+        data['state'] = 'inactive'
+    else:
+        data['state'] = 'active'
+    return data
+
+
+def calculate_rating(previous, current):
+    if previous['rating'] is None:
+        # calculate initial state and rating
+        if current['latency'] > 0.05:
+            current['rating'] = 5.0
+        elif current['latency']:
+            current['rating'] = 0.0
+        else:
+            current['rating'] = 10.0
+    else:
+        # based on previous rating
+        current['rating'] = previous['rating']
+
+        # increase/decrease rating according latency
+        if current['latency'] > 0.05:
+            current['rating'] = current['rating'] + 0.5
+        elif current['latency']:
+            current['rating'] = current['rating'] - 1.0
+        else:
+            current['rating'] = current['rating'] + 1.0
+
+        # apply boundaries
+        if current['rating'] < 0.0:
+            current['rating'] = 0.0
+        elif current['rating'] > 10.0:
+            current['rating'] = 10.0
+
+    #print("New rating for %s: %s" %(current['tag'], current['rating']))
+    return current
+
+
+def event_list_updated(data):
+    global results
+
     # create lookup
     lookup = {}
-    for item in past:
+    for item in results:
         lookup[item['tag']] = item
 
-    for updated in next:
+    # clear results
+    del results[:]
+
+    for current in data:
         try:
-            item = lookup[updated['tag']]
-            if item['rating']:
-                updated['rating'] = item['rating'] + updated['rating']
+            previous = lookup[current['tag']]
+            if not previous['state'] or previous['state'] != current['state']:
+                event_state_changed(current['tag'], current['state'])
 
-                if updated['rating'] < 0.0:
-                    updated['rating'] = 0.0
-
-                if updated['rating'] > 10.0:
-                    updated['rating'] = 10.0
-                    updated['state'] = 'inactive'
-                elif updated['rating'] > 5.0:
-                    updated['state'] = 'unstable'
-                else:
-                    updated['state'] = 'active'
-            else:
-                if updated['state'] == 'inactive':
-                    updated['rating'] = 10.0
-                elif updated['state'] == 'unstable':
-                    updated['rating'] = 6.0
-                else:
-                    updated['rating'] = 0.0
-
-                if not item['state'] or item['state'] != updated['state']:
-                    event_state_changed(updated['tag'], updated['state'])
+            current = calculate_rating(previous, current)
+            current = calculate_state(current)
         except KeyError:
-            event_info_changed(updated['tag'], updated)
-            event_state_changed(updated['tag'], updated['state'])
+            event_info_changed(current['tag'], current)
+            event_state_changed(current['tag'], current['state'])
+
+        # finally use it as new result
+        results.append(current)
 
 
 def event_removed(tag):
@@ -193,16 +224,6 @@ def queryAll():
         except socket.gaierror:
             ret = None
 
-        if ret > 0.05:
-            state = 'unstable'
-            rating = -0.5
-        elif ret:
-            state = 'active'
-            rating = -1.0
-        else:
-            state = 'inactive'
-            rating = 1.0
-
         device = {
             'tag': row[0],
             'name': row[1],
@@ -211,9 +232,9 @@ def queryAll():
             'ipv4_address': row[4],
             'management_url': row[5],
             'latency': ret,
-            'state': state,
+            'state': None,
             'group': row[6],
-            'rating': rating
+            'rating': None
         }
 
         if not device['management_url']:
@@ -261,15 +282,17 @@ class Monitor(threading.Thread):
                         break
 
                     ret = queryAll()
-                    if stdscr:
-                        self.report(stdscr, ret)
+
                     result_lock.acquire()
                     if not ignore_result:
-                        analyze_transitions(results, ret)
-                        results = ret
+                        event_list_updated(ret)
                     else:
                         ignore_result = False
                     result_lock.release()
+
+                    if stdscr:
+                        self.report(stdscr, results)
+
                     time.sleep(1.0)
 
         finally:
